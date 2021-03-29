@@ -50,10 +50,12 @@ class ValueDataType(TypedDict, total=False):
 
 def _init_value(
     node: "Node", val: ValueDataType
-) -> Union["Value", "ConfigurationValue"]:
+) -> Union["Value", "ConfigurationValue", "ProtectionValue"]:
     """Intialize a Value object from ValueDataType."""
     if val["commandClass"] == CommandClass.CONFIGURATION:
         return ConfigurationValue(node, val)
+    elif val["commandClass"] == CommandClass.PROTECTION:
+        return ProtectionValue(node, val)
     return Value(node, val)
 
 
