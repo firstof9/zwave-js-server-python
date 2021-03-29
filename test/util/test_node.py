@@ -230,6 +230,7 @@ async def test_returned_values(multisensor_6, mock_command):
 
 
 async def test_protection_values(inovelli_switch, uuid4, mock_command):
+    """Test node methods to get and set protection parameter values."""
 
     node: Node = inovelli_switch
     ack_commands = mock_command(
@@ -264,11 +265,11 @@ async def test_protection_values(inovelli_switch, uuid4, mock_command):
         "messageId": uuid4,
     }
 
-    zwave_value, cmd_status = await async_set_protection_parameter(node, 10, "local")
+    zwave_value, cmd_status = await async_set_protection_parameter(node, 10, "rf")
     assert isinstance(zwave_value, ProtectionValue)
     assert cmd_status == CommandStatus.ACCEPTED
 
-    value = node.values["31-117-0-local"]
+    value = node.values["31-117-0-rf"]
     assert len(ack_commands) == 2
     assert ack_commands[1] == {
         "command": "node.set_value",

@@ -1,7 +1,7 @@
 """Test value model."""
 from copy import deepcopy
 
-from zwave_js_server.const import ConfigurationValueType
+from zwave_js_server.const import ConfigurationValueType, ProtectionValueType
 from zwave_js_server.model.node import Node
 from zwave_js_server.model.value import get_value_id
 
@@ -53,3 +53,14 @@ def test_allow_manual_entry(client, inovelli_switch_state):
     zwave_value = config_values[value_id]
 
     assert zwave_value.configuration_value_type == ConfigurationValueType.ENUMERATED
+
+
+def test_protection_entry(client, inovelli_switch_state):
+    """Test that allow_manaual_entry works correctly."""
+    node = Node(client, inovelli_switch_state)
+
+    protection_values = node.get_protection_values()
+    value_id = get_value_id(node, 117, "local", 0)
+    zwave_value = protection_values[value_id]
+
+    assert zwave_value.protection_value_type == ProtectionValueType.ENUMERATED
