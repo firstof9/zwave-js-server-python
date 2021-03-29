@@ -2,20 +2,33 @@
 import json
 from typing import Dict, Optional, Tuple, Union, cast
 
-from ..const import CommandClass, CommandStatus, ConfigurationValueType
+from ..const import (
+    CommandClass,
+    CommandStatus,
+    ConfigurationValueType,
+    ProtectionValueType,
+)
 from ..exceptions import InvalidNewValue, NotFoundError, SetValueFailed, ValueTypeError
 from ..model.node import Node
 from ..model.value import ConfigurationValue, ProtectionValue, get_value_id
 
 
 def _validate_and_transform_new_value(
-    zwave_value: ConfigurationValue, new_value: Union[int, str]
+    zwave_value: Union[ConfigurationValue, ProtectionValue], new_value: Union[int, str]
 ) -> int:
     """Validate a new value and return the integer value to set."""
     # Validate that new value for enumerated configuration parameter is a valid state
     # key or label
     if (
-        zwave_value.configuration_value_type == ConfigurationValueType.ENUMERATED
+        (
+            isinstance(zwave_value, ConfigurationValue)
+            and zwave_value.configuration_value_type
+            == ConfigurationValueType.ENUMERATED
+        )
+        or (
+            isinstance(zwave_value, ProtectionValue)
+            and zwave_value.protection_value_type == ProtectionValueType.ENUMERATED
+        )
         and str(new_value)
         not in [
             *zwave_value.metadata.states,
@@ -30,7 +43,8 @@ def _validate_and_transform_new_value(
     # Validate that new value for manual entry configuration parameter is a valid state
     # key or label
     if (
-        isinstance(new_value, str)
+        isinstance(zwave_value, ConfigurationValue)
+        and isinstance(new_value, str)
         and zwave_value.configuration_value_type == ConfigurationValueType.MANUAL_ENTRY
         and str(new_value) not in zwave_value.metadata.states.values()
     ):
@@ -50,7 +64,13 @@ def _validate_and_transform_new_value(
             )
         )
 
-    if zwave_value.configuration_value_type == ConfigurationValueType.UNDEFINED:
+    if (
+        isinstance(zwave_value, ConfigurationValue)
+        and zwave_value.configuration_value_type == ConfigurationValueType.UNDEFINED
+    ) or (
+        isinstance(zwave_value, ProtectionValue)
+        and zwave_value.protection_value_type == ProtectionValueType.UNDEFINED
+    ):
         # We need to use the Configuration CC API to set the value for this type
         raise NotImplementedError("Configuration values of undefined type can't be set")
 
@@ -58,8 +78,16 @@ def _validate_and_transform_new_value(
     max_ = zwave_value.metadata.max
     min_ = zwave_value.metadata.min
     check_ = (
-        zwave_value.configuration_value_type == ConfigurationValueType.RANGE
-        or zwave_value.configuration_value_type == ConfigurationValueType.MANUAL_ENTRY
+        isinstance(zwave_value, ConfigurationValue)
+        and (
+            zwave_value.configuration_value_type == ConfigurationValueType.RANGE
+            or zwave_value.configuration_value_type
+            == ConfigurationValueType.MANUAL_ENTRY
+        )
+        or (
+            isinstance(zwave_value, ProtectionValue)
+            and zwave_value.protection_value_type == ProtectionValueType.RANGE
+        )
     )
     if check_ and (
         (max_ is not None and new_value > max_)

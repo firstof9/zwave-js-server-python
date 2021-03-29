@@ -118,30 +118,6 @@ async def test_configuration_parameter_values(
         "messageId": uuid4,
     }
 
-    protection_values = node_2.get_protection_values()
-    assert len(protection_values) == 4
-
-    for value in protection_values.values():
-        assert isinstance(value, ProtectionValue)
-
-    # Test setting a manual entry configuration parameter with an invalid value
-    with pytest.raises(InvalidNewValue):
-        await async_set_protection_parameter(node_2, "invalid", "local")
-
-    zwave_value, cmd_status = await async_set_protection_parameter(node_2, 0, "local")
-    assert isinstance(zwave_value, ProtectionValue)
-    assert cmd_status == CommandStatus.ACCEPTED
-
-    value = node_2.values["31-117-0-local"]
-    assert len(ack_commands_2) == 1
-    assert ack_commands_2[3] == {
-        "command": "node.set_value",
-        "nodeId": node_2.node_id,
-        "valueId": value.data,
-        "value": 0,
-        "messageId": uuid4,
-    }
-
 
 async def test_bulk_set_partial_config_parameters(multisensor_6, uuid4, mock_command):
     """Test bulk setting partial config parameters."""
@@ -251,3 +227,53 @@ async def test_returned_values(multisensor_6, mock_command):
     zwave_value, cmd_status = await async_set_config_parameter(node, 1, 101, 64)
     assert isinstance(zwave_value, ConfigurationValue)
     assert cmd_status == CommandStatus.ACCEPTED
+
+
+async def test_protection_values(inovelli_switch, uuid4, mock_command):
+
+    node: Node = inovelli_switch
+    ack_commands = mock_command(
+        {"command": "node.set_value", "nodeId": node.node_id},
+        {"success": True},
+    )
+
+    # Test setting protection values
+    protection_values = node.get_protection_values()
+    assert len(protection_values) == 4
+
+    for value in protection_values.values():
+        assert isinstance(value, ProtectionValue)
+
+    # Test setting a manual entry configuration parameter with an invalid value
+    with pytest.raises(InvalidNewValue):
+        await async_set_protection_parameter(node, "invalid", "local")
+
+    zwave_value, cmd_status = await async_set_protection_parameter(
+        node, "unknown (0x08)", "local"
+    )
+    assert isinstance(zwave_value, ProtectionValue)
+    assert cmd_status == CommandStatus.ACCEPTED
+
+    value = node.values["31-117-0-local"]
+    assert len(ack_commands) == 1
+    assert ack_commands[0] == {
+        "command": "node.set_value",
+        "nodeId": node.node_id,
+        "valueId": value.data,
+        "value": 8,
+        "messageId": uuid4,
+    }
+
+    zwave_value, cmd_status = await async_set_protection_parameter(node, 10, "local")
+    assert isinstance(zwave_value, ProtectionValue)
+    assert cmd_status == CommandStatus.ACCEPTED
+
+    value = node.values["31-117-0-local"]
+    assert len(ack_commands) == 2
+    assert ack_commands[1] == {
+        "command": "node.set_value",
+        "nodeId": node.node_id,
+        "valueId": value.data,
+        "value": 10,
+        "messageId": uuid4,
+    }
