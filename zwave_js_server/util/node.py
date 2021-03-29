@@ -5,7 +5,7 @@ from typing import Dict, Optional, Tuple, Union, cast
 from ..const import CommandClass, CommandStatus, ConfigurationValueType
 from ..exceptions import InvalidNewValue, NotFoundError, SetValueFailed, ValueTypeError
 from ..model.node import Node
-from ..model.value import ConfigurationValue, get_value_id
+from ..model.value import ConfigurationValue, ProtectionValue, get_value_id
 
 
 def _validate_and_transform_new_value(
@@ -220,6 +220,66 @@ async def async_set_config_parameter(
                 "found"
             ) from None
         zwave_value = config_values[value_id]
+
+    new_value = _validate_and_transform_new_value(zwave_value, new_value)
+
+    # Finally attempt to set the value and return the Value object if successful
+    success = await node.async_set_value(zwave_value, new_value)
+    if success is False:
+        raise SetValueFailed(
+            "Unable to set value, refer to "
+            "https://zwave-js.github.io/node-zwave-js/#/api/node?id=setvalue for "
+            "possible reasons"
+        )
+
+    status = CommandStatus.ACCEPTED if success else CommandStatus.QUEUED
+
+    return zwave_value, status
+
+
+async def async_set_protection_parameter(
+    node: Node,
+    new_value: Union[int, str],
+    property_or_property_name: Union[int, str],
+    property_key: Optional[Union[int, str]] = None,
+) -> Tuple[ProtectionValue, CommandStatus]:
+    """
+    Set a value for a protection parameter on this node.
+
+    new_value and property_ can be provided as labels, so we need to resolve them to
+    the appropriate key
+    """
+    protection_values = node.get_protection_values()
+
+    # If a property name is provided, we have to search for the correct value since
+    # we can't use value ID
+    if isinstance(property_or_property_name, str):
+        try:
+            zwave_value = next(
+                protection_value
+                for protection_value in protection_values.values()
+                if protection_value.property_name == property_or_property_name
+            )
+        except StopIteration:
+            raise NotFoundError(
+                "Configuration parameter with parameter name "
+                f"{property_or_property_name} could not be found"
+            ) from None
+    else:
+        value_id = get_value_id(
+            node,
+            CommandClass.PROTECTION,
+            property_or_property_name,
+            endpoint=0,
+            property_key=property_key,
+        )
+
+        if value_id not in protection_values:
+            raise NotFoundError(
+                f"Configuration parameter with value ID {value_id} could not be "
+                "found"
+            ) from None
+        zwave_value = protection_values[value_id]
 
     new_value = _validate_and_transform_new_value(zwave_value, new_value)
 

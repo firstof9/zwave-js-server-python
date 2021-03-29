@@ -19,6 +19,7 @@ from .notification import (
 from .value import (
     ConfigurationValue,
     MetaDataType,
+    ProtectionValue,
     Value,
     ValueDataType,
     ValueMetadata,
@@ -95,7 +96,7 @@ class Node(EventBase):
         super().__init__()
         self.client = client
         self.data = data
-        self.values: Dict[str, Union[Value, ConfigurationValue]] = {}
+        self.values: Dict[str, Union[Value, ConfigurationValue, ProtectionValue]] = {}
         for val in data["values"]:
             value_id = _get_value_id_from_dict(self, val)
             try:
@@ -316,6 +317,13 @@ class Node(EventBase):
         return cast(
             Dict[str, ConfigurationValue],
             self.get_command_class_values(CommandClass.CONFIGURATION),
+        )
+
+    def get_protection_values(self) -> Dict[str, ProtectionValue]:
+        """Return all protection values for a node."""
+        return cast(
+            Dict[str, ProtectionValue],
+            self.get_command_class_values(CommandClass.PROTECTION),
         )
 
     def receive_event(self, event: Event) -> None:

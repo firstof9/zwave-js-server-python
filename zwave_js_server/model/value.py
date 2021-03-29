@@ -1,7 +1,12 @@
 """Provide a model for the Z-Wave JS value."""
 from typing import TYPE_CHECKING, Any, Dict, Optional, TypedDict, Union
 
-from ..const import VALUE_UNKNOWN, CommandClass, ConfigurationValueType
+from ..const import (
+    VALUE_UNKNOWN,
+    CommandClass,
+    ConfigurationValueType,
+    ProtectionValueType,
+)
 from ..event import Event
 from ..util.helpers import parse_buffer
 
@@ -289,3 +294,20 @@ class ConfigurationValue(Value):
                 return ConfigurationValueType.RANGE
 
         return ConfigurationValueType.UNDEFINED
+
+
+class ProtectionValue(Value):
+    """Model for a Configuration Value."""
+
+    @property
+    def protection_value_type(self) -> ProtectionValueType:
+        """Return configuration value type."""
+        if self.metadata.type == "number":
+            if self.metadata.states:
+                return ProtectionValueType.ENUMERATED
+            if (
+                self.metadata.max is not None or self.metadata.min is not None
+            ) and not self.metadata.max == self.metadata.min == 0:
+                return ProtectionValueType.RANGE
+
+        return ProtectionValueType.UNDEFINED

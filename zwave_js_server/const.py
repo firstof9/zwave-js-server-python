@@ -401,3 +401,11 @@ class ColorComponent(IntEnum):
     CYAN = 6
     PURPLE = 7
     INDEX = 8
+
+
+class ProtectionValueType(Enum):
+    """Enum for protection value types."""
+
+    ENUMERATED = "enumerated"
+    RANGE = "range"
+    UNDEFINED = "undefined"
