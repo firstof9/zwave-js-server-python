@@ -9,10 +9,11 @@ from zwave_js_server.exceptions import (
     ValueTypeError,
 )
 from zwave_js_server.model.node import Node
-from zwave_js_server.model.value import ConfigurationValue
+from zwave_js_server.model.value import ConfigurationValue, ProtectionValue
 from zwave_js_server.util.node import (
     async_bulk_set_partial_config_parameters,
     async_set_config_parameter,
+    async_set_protection_parameter,
 )
 
 
@@ -114,6 +115,30 @@ async def test_configuration_parameter_values(
         "nodeId": node.node_id,
         "valueId": value.data,
         "value": 4,
+        "messageId": uuid4,
+    }
+
+    protection_values = node_2.get_protection_values()
+    assert len(protection_values) == 4
+
+    for value in protection_values.values():
+        assert isinstance(value, ProtectionValue)
+
+    # Test setting a manual entry configuration parameter with an invalid value
+    with pytest.raises(InvalidNewValue):
+        await async_set_protection_parameter(node_2, "invalid", "local")
+
+    zwave_value, cmd_status = await async_set_protection_parameter(node_2, 0, "local")
+    assert isinstance(zwave_value, ProtectionValue)
+    assert cmd_status == CommandStatus.ACCEPTED
+
+    value = node_2.values["31-117-0-local"]
+    assert len(ack_commands_2) == 1
+    assert ack_commands_2[3] == {
+        "command": "node.set_value",
+        "nodeId": node_2.node_id,
+        "valueId": value.data,
+        "value": 0,
         "messageId": uuid4,
     }
 
